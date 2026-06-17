@@ -1,0 +1,6 @@
+node_modules/
+.yarn-cache/
+.next/
+reports/
+a11y-crawler.config.json
+dist/

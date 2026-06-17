@@ -1,0 +1,58 @@
+{
+  "platform": "ios",
+  "appiumServerUrl": "http://127.0.0.1:4723",
+  "capabilities": {
+    "platformName": "iOS",
+    "appium:automationName": "XCUITest",
+    "appium:deviceName": "iPhone 15",
+    "appium:platformVersion": "17.5",
+    "appium:bundleId": "com.yourcompany.yourexpoapp",
+    "appium:noReset": true,
+    "appium:autoAcceptAlerts": true,
+    "appium:newCommandTimeout": 300,
+    "appium:waitForIdleTimeout": 2,
+    "appium:reduceMotion": true
+  },
+  "bootstrap": {
+    "startAppium": true,
+    "appiumCommand": "yarn appium:server",
+    "startSimulator": true,
+    "simulatorName": "iPhone 15",
+    "startExpo": false,
+    "expoCommand": "yarn expo start --dev-client",
+    "expoCwd": "../your-expo-app",
+    "startupTimeoutMs": 90000
+  },
+  "crawl": {
+    "maxDepth": 5,
+    "maxScreens": 40,
+    "maxDurationMs": 600000,
+    "appReadyTimeoutMs": 120000,
+    "maxActionsPerScreen": 8,
+    "maxTapTargetsPerScreen": 24,
+    "tapTimeoutMs": 2500,
+    "settleMs": 900,
+    "includeTextsAsTapTargets": false,
+    "denyLabels": [
+      "Delete",
+      "Logout",
+      "Sign out"
+    ],
+    "denyPatterns": [
+      "delete",
+      "logout",
+      "sign out",
+      "heading"
+    ],
+    "seedActions": [
+      {
+        "type": "tap",
+        "selector": "~loginButton",
+        "required": false
+      }
+    ]
+  },
+  "report": {
+    "outputDir": "reports/a11y-crawl"
+  }
+}
