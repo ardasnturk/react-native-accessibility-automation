@@ -16,12 +16,14 @@ The project is local-first by design: app builds, screenshots, XML source, crawl
 - `reports/`: generated crawl artifacts. Do not commit generated report output.
 - `a11y-crawler.config.example.json`: public example config.
 - `a11y-crawler.config.json`: local config. This file is ignored by git.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, and `.github/`: open-source community and release files.
 
 ## Development Rules
 
 - Use Yarn, not npm.
 - Keep all public documentation in English.
 - Keep `README.md` focused on user setup and operation. Keep `AGENTS.md` focused on maintainers and coding agents.
+- Keep community files concise and practical. Avoid adding process that the project does not actually follow.
 - Prefer bounded crawling over open-ended recursion. Every navigation strategy must have clear limits.
 - Never add destructive UI actions to default examples.
 - Treat `testID` as an automation selector only. Accessibility findings must evaluate labels, roles, text, content descriptions, traits, target size, and related assistive metadata.

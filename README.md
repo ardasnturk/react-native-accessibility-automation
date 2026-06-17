@@ -10,6 +10,16 @@ Current release: `0.1.0`
 
 This first public release includes the TypeScript crawler, the self-hosted Next.js dashboard, simulator onboarding, report history, screenshots, XML artifacts, grouped crawler events, and English/Turkish UI support.
 
+## License
+
+This project is released under the [MIT License](LICENSE).
+
+## Community
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Use GitHub Issues for reproducible bugs and feature requests.
+- Do not include sensitive app screenshots, XML output, or user data in public issues.
+
 ## Features
 
 - Next.js App Router web app with a landing page and local dashboard.
