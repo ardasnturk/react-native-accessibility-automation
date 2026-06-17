@@ -1,6 +1,14 @@
-# Mobile A11y Crawler
+# React Native Accessibility Automation
 
-Mobile A11y Crawler is a self-hosted accessibility crawler for Expo and React Native apps. It uses Appium to launch an app on an iOS Simulator or Android Emulator, explores reachable screens, audits visible interactive elements, captures screenshots, and presents results in a local responsive web dashboard.
+React Native Accessibility Automation is a self-hosted accessibility crawler for Expo and React Native apps. It uses Appium to launch an app on an iOS Simulator or Android Emulator, explores reachable screens, audits visible interactive elements, captures screenshots, and presents results in a local responsive web dashboard.
+
+The project is designed for teams that want repeatable local accessibility checks without sending app builds, screenshots, or crawler reports to a hosted service. It is currently focused on Expo Dev Client and iOS Simulator workflows, with Android support available through Appium UiAutomator2 configuration.
+
+## Release Status
+
+Current release: `0.1.0`
+
+This first public release includes the TypeScript crawler, the self-hosted Next.js dashboard, simulator onboarding, report history, screenshots, XML artifacts, grouped crawler events, and English/Turkish UI support.
 
 ## Features
 
@@ -211,6 +219,18 @@ Use `testID` for automation and accessibility props for assistive technology.
 ```
 
 `testID` helps the crawler find the element. It does not provide a meaningful screen reader name by itself.
+
+## Project Scripts
+
+Use the web dashboard for normal operation. The CLI scripts are still available for local debugging and automation.
+
+| Script | Purpose |
+| ------ | ------- |
+| `yarn start` | Build and start the self-hosted Next.js dashboard on `127.0.0.1:4174`. |
+| `yarn dev` | Start the Next.js development server. |
+| `yarn a11y:crawl` | Run the crawler directly with `a11y-crawler.config.json`. |
+| `yarn appium:server` | Start Appium with relaxed security for local automation. |
+| `yarn build` | Build the Next.js app. |
 
 ## Manual CLI Usage
 
