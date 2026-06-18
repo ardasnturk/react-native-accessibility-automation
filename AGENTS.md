@@ -30,6 +30,7 @@ The project is local-first by design: app builds, screenshots, XML source, crawl
 - Runtime failures should be recorded in `report.json` whenever possible instead of crashing without output.
 - Keep the dashboard local-first and self-hosted. Do not introduce a hosted dependency without a clear opt-in design.
 - Crawler events are operational diagnostics, not accessibility findings. Keep the UI copy clear about that distinction.
+- Standards claims must be precise: reports are aligned with W3C/WAI mobile accessibility guidance and mapped to WCAG references where possible; they are not complete WCAG conformance claims.
 
 ## Verification
 

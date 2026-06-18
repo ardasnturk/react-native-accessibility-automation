@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import NextImage from "next/image";
 import {
   AlertTriangle,
@@ -33,6 +33,7 @@ type Finding = {
   screenId: string;
   rule: string;
   message: string;
+  standards?: Array<{ source: string; id: string; title: string; url: string }>;
   element: {
     type: string;
     label?: string;
@@ -199,6 +200,10 @@ const copy = {
     evidence: "Evidence",
     reportPreparing: "Preparing report evidence",
     reportPreparingText: "The crawl is running. Screenshots and findings will appear as soon as the first screen is saved.",
+    finalReport: "General Report",
+    finalReportText: "The latest saved report is ready for review.",
+    generatedAt: "Generated",
+    runId: "Run ID",
     element: "Element",
     bounds: "Bounds",
     path: "Path",
@@ -268,6 +273,10 @@ const copy = {
     evidence: "Kanıt",
     reportPreparing: "Rapor kanıtları hazırlanıyor",
     reportPreparingText: "Test çalışıyor. İlk ekran kaydedildiğinde ekran görüntüleri ve bulgular burada görünecek.",
+    finalReport: "Genel Rapor",
+    finalReportText: "Kaydedilen son rapor incelemeye hazır.",
+    generatedAt: "Oluşturulma",
+    runId: "Run ID",
     element: "Element",
     bounds: "Ölçü",
     path: "Path",
@@ -280,6 +289,7 @@ export default function DashboardPage() {
   const t = copy[locale];
   const [runs, setRuns] = useState<RunListItem[]>([]);
   const [selectedRun, setSelectedRun] = useState("");
+  const selectedRunRef = useRef("");
   const [report, setReport] = useState<Report | null>(null);
   const [selectedScreenId, setSelectedScreenId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -308,11 +318,24 @@ export default function DashboardPage() {
     if (storedLocale === "en" || storedLocale === "tr") setLocale(storedLocale);
   }, []);
 
+  useEffect(() => {
+    selectedRunRef.current = selectedRun;
+  }, [selectedRun]);
+
   async function refresh() {
     await refreshSetup();
 
     const statusResponse = await fetch("/api/crawl/status");
-    if (statusResponse.ok) setCrawlStatus((await statusResponse.json()) as CrawlStatus);
+    const nextStatus = statusResponse.ok ? ((await statusResponse.json()) as CrawlStatus) : undefined;
+    if (nextStatus) {
+      setCrawlStatus(nextStatus);
+      if (nextStatus.runId && nextStatus.running && selectedRunRef.current !== nextStatus.runId) {
+        selectedRunRef.current = nextStatus.runId;
+        setSelectedRun(nextStatus.runId);
+        setSelectedScreenId(null);
+        setReport(createPendingReport(nextStatus.startedAt));
+      }
+    }
 
     const runsResponse = await fetch("/api/runs");
     const runsPayload = (await runsResponse.json()) as { runs: Array<string | RunListItem> };
@@ -321,29 +344,42 @@ export default function DashboardPage() {
     );
     setRuns(normalizedRuns);
 
-    if (selectedRun) {
-      const reportResponse = await fetch(`/api/runs/${selectedRun}/report`);
-      if (reportResponse.ok) {
-        const nextReport = normalizeReport((await reportResponse.json()) as Partial<Report>);
-        setReport(nextReport);
-        setSelectedScreenId((current) => current ?? nextReport.screens[0]?.id ?? null);
-      }
+    const targetRun = selectedRunRef.current || nextStatus?.runId || "";
+    if (targetRun) {
+      await loadReport(targetRun, { keepScreenSelection: true, pendingStartedAt: nextStatus?.startedAt });
     }
   }
 
-  async function openRun(runId: string) {
-    setSelectedRun(runId);
+  async function loadReport(
+    runId: string,
+    options: { keepScreenSelection: boolean; pendingStartedAt?: string } = { keepScreenSelection: false },
+  ) {
     const reportResponse = await fetch(`/api/runs/${runId}/report`);
     if (reportResponse.ok) {
       const nextReport = normalizeReport((await reportResponse.json()) as Partial<Report>);
       setReport(nextReport);
-      setSelectedScreenId(nextReport.screens[0]?.id ?? null);
+      setSelectedScreenId((current) => {
+        if (options.keepScreenSelection && current && nextReport.screens.some((screen) => screen.id === current)) {
+          return current;
+        }
+        return nextReport.screens[0]?.id ?? null;
+      });
+      return;
     }
+
+    setReport((current) => current ?? createPendingReport(options.pendingStartedAt));
+  }
+
+  async function openRun(runId: string) {
+    selectedRunRef.current = runId;
+    setSelectedRun(runId);
+    await loadReport(runId);
   }
 
   async function deleteRun(runId: string) {
     await fetch(`/api/runs/${runId}`, { method: "DELETE" });
     if (selectedRun === runId) {
+      selectedRunRef.current = "";
       setSelectedRun("");
       setReport(null);
       setSelectedScreenId(null);
@@ -357,9 +393,10 @@ export default function DashboardPage() {
     const status = response.ok ? ((await response.json()) as CrawlStatus) : undefined;
     const runId = status?.runId ?? `run-${new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-")}`;
     setCrawlStatus((current) => ({ ...current, ...(status ?? {}), running: status?.running ?? true, runId }));
+    selectedRunRef.current = runId;
     setSelectedRun(runId);
     setSelectedScreenId(null);
-    setReport(createPendingReport());
+    setReport(createPendingReport(status?.startedAt));
     await refresh();
   }
 
@@ -370,7 +407,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 5000);
+    const interval = window.setInterval(() => void refresh(), 2000);
     return () => window.clearInterval(interval);
   }, []);
 
@@ -567,7 +604,12 @@ export default function DashboardPage() {
           startCrawl={startCrawl}
           stopCrawl={stopCrawl}
           openSettings={() => setSettingsOpen(true)}
-          backToReports={() => { setSelectedRun(""); setReport(null); setSelectedScreenId(null); }}
+          backToReports={() => {
+            selectedRunRef.current = "";
+            setSelectedRun("");
+            setReport(null);
+            setSelectedScreenId(null);
+          }}
         />
 
         {!report ? (
@@ -732,6 +774,23 @@ function ReportView(props: {
         <Metric icon={crawlStatus.running ? <Clock /> : report.summary.completed ? <CheckCircle2 /> : <Gauge />} label={t.status} value={crawlStatus.stopping ? t.stopping : crawlStatus.running ? t.running : report.summary.completed ? t.done : t.partial} foot={report.summary.completed ? t.completed : t.incomplete} />
       </section>
 
+      {!crawlStatus.running ? (
+        <section className="panel final-summary-panel">
+          <header className="panel-header">
+            <div>
+              <div className="panel-title"><CheckCircle2 size={18} /> {t.finalReport}</div>
+              <p className="panel-subtitle">{t.finalReportText}</p>
+            </div>
+          </header>
+          <div className="summary-facts">
+            <SummaryFact label={t.status} value={report.summary.completed ? t.done : t.partial} />
+            <SummaryFact label={t.generatedAt} value={formatRunDate(report.generatedAt)} />
+            <SummaryFact label={t.runId} value={selectedRun} />
+            <SummaryFact label={t.runtimeEvents} value={report.summary.events} />
+          </div>
+        </section>
+      ) : null}
+
       <section className="report-workspace">
         <aside className="panel screen-list">
           <header className="panel-header">
@@ -803,6 +862,15 @@ function ReportView(props: {
                     {finding.element.bounds ? <div><dt>{t.bounds}</dt><dd>{formatBounds(finding.element.bounds)}</dd></div> : null}
                     <div><dt>{t.path}</dt><dd>{finding.element.path}</dd></div>
                   </dl>
+                  {finding.standards && finding.standards.length > 0 ? (
+                    <div className="standard-chip-list">
+                      {finding.standards.map((standard) => (
+                        <a key={`${standard.source}-${standard.id}`} href={standard.url} target="_blank" rel="noreferrer">
+                          {standard.source} {standard.id}
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
@@ -836,6 +904,14 @@ function ReportView(props: {
 }
 
 function LogPanel({ status, t }: { status: CrawlStatus; t: typeof copy.en }) {
+  const logRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    const node = logRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [status.logs, status.running, status.stopping]);
+
   return (
     <section className="log-panel">
       <div className="job-meta">
@@ -843,8 +919,17 @@ function LogPanel({ status, t }: { status: CrawlStatus; t: typeof copy.en }) {
         {status.exitCode !== undefined ? <span>Exit {status.exitCode}</span> : null}
         {status.startedAt ? <span>{new Date(status.startedAt).toLocaleTimeString()}</span> : null}
       </div>
-      <pre>{status.logs.length > 0 ? status.logs.join("\n") : t.logsEmpty}</pre>
+      <pre ref={logRef} aria-live="polite">{status.logs.length > 0 ? status.logs.join("\n") : t.logsEmpty}</pre>
     </section>
+  );
+}
+
+function SummaryFact({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="summary-fact">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -914,9 +999,9 @@ function groupRunEvents(events: RunEvent[]): GroupedRunEvent[] {
   return [...groups.values()].sort((a, b) => new Date(a.lastTimestamp).getTime() - new Date(b.lastTimestamp).getTime());
 }
 
-function createPendingReport(): Report {
+function createPendingReport(startedAt?: string): Report {
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt: startedAt ?? new Date().toISOString(),
     platform: "ios",
     summary: {
       screensVisited: 0,

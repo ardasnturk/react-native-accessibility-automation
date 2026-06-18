@@ -70,11 +70,27 @@ type TapTarget = {
   selector: string;
 };
 
+type StandardReference = {
+  source: string;
+  id: string;
+  title: string;
+  url: string;
+};
+
+type StandardsMetadata = {
+  name: string;
+  url: string;
+  note: string;
+  conformanceClaim: false;
+  basis: StandardReference[];
+};
+
 type Finding = {
   severity: "error" | "warning";
   screenId: string;
   rule: string;
   message: string;
+  standards: StandardReference[];
   element: {
     type: string;
     label?: string;
@@ -117,6 +133,75 @@ type JsonReport = {
   screens: ScreenReport[];
   findings: Finding[];
   events: RunEvent[];
+  standards: StandardsMetadata;
+};
+
+const standardsMetadata: StandardsMetadata = {
+  name: "W3C/WAI Mobile Accessibility alignment",
+  url: "https://www.w3.org/WAI/standards-guidelines/mobile/",
+  note: "W3C does not define separate mobile accessibility guidelines. This report maps automated checks to WCAG/WAI guidance that W3C identifies as applicable to mobile web, native, and hybrid applications. It is not a complete WCAG conformance claim.",
+  conformanceClaim: false,
+  basis: [
+    {
+      source: "W3C/WAI",
+      id: "Mobile Accessibility at W3C",
+      title: "Mobile Accessibility at W3C",
+      url: "https://www.w3.org/WAI/standards-guidelines/mobile/",
+    },
+    {
+      source: "W3C/WAI",
+      id: "WCAG2Mobile",
+      title: "Guidance on Applying WCAG 2.2 to Mobile Applications",
+      url: "https://www.w3.org/TR/wcag2mobile-22/",
+    },
+    {
+      source: "W3C/WAI",
+      id: "WCAG2ICT",
+      title: "Guidance on Applying WCAG 2 to Non-Web Information and Communications Technologies",
+      url: "https://www.w3.org/TR/wcag2ict/",
+    },
+  ],
+};
+
+const ruleStandards: Record<string, StandardReference[]> = {
+  "interactive-name": [
+    {
+      source: "WCAG 2.2",
+      id: "4.1.2",
+      title: "Name, Role, Value",
+      url: "https://www.w3.org/TR/WCAG22/#name-role-value",
+    },
+  ],
+  "short-name": [
+    {
+      source: "WCAG 2.2",
+      id: "2.4.6",
+      title: "Headings and Labels",
+      url: "https://www.w3.org/TR/WCAG22/#headings-and-labels",
+    },
+    {
+      source: "WCAG 2.2",
+      id: "2.5.3",
+      title: "Label in Name",
+      url: "https://www.w3.org/TR/WCAG22/#label-in-name",
+    },
+  ],
+  "touch-target-size": [
+    {
+      source: "WCAG 2.2",
+      id: "2.5.8",
+      title: "Target Size (Minimum)",
+      url: "https://www.w3.org/TR/WCAG22/#target-size-minimum",
+    },
+  ],
+  "android-content-desc": [
+    {
+      source: "WCAG 2.2",
+      id: "4.1.2",
+      title: "Name, Role, Value",
+      url: "https://www.w3.org/TR/WCAG22/#name-role-value",
+    },
+  ],
 };
 
 const parser = new XMLParser({
@@ -328,6 +413,7 @@ class Crawler {
       screens: this.screens,
       findings: this.findings,
       events: this.events,
+      standards: standardsMetadata,
     };
 
     await writeFile(
@@ -408,6 +494,7 @@ class Crawler {
           screenId,
           rule: "interactive-name",
           message: "Interactive element has no accessible name.",
+          standards: standardsForRule("interactive-name"),
           element: findingElement(node),
         });
       }
@@ -418,6 +505,7 @@ class Crawler {
           screenId,
           rule: "short-name",
           message: "Interactive element has a very short accessible name.",
+          standards: standardsForRule("short-name"),
           element: findingElement(node),
         });
       }
@@ -430,6 +518,7 @@ class Crawler {
           screenId,
           rule: "touch-target-size",
           message: `Interactive element ${elementName} is ${Math.round(bounds.width)}x${Math.round(bounds.height)}. Recommended minimum is 44x44 points/pixels.`,
+          standards: standardsForRule("touch-target-size"),
           element: findingElement(node),
         });
       }
@@ -440,6 +529,7 @@ class Crawler {
           screenId,
           rule: "android-content-desc",
           message: "Clickable Android element has an empty content-desc.",
+          standards: standardsForRule("android-content-desc"),
           element: findingElement(node),
         });
       }
@@ -1005,6 +1095,10 @@ function findingElement(node: UiNode): Finding["element"] {
   };
 }
 
+function standardsForRule(rule: string): StandardReference[] {
+  return ruleStandards[rule] ?? [];
+}
+
 function uniqueBy<T>(getKey: (value: T) => string): (value: T) => boolean {
   const seen = new Set<string>();
   return (value: T) => {
@@ -1037,6 +1131,7 @@ function renderMarkdownReport(report: {
   screens: ScreenReport[];
   findings: Finding[];
   events: RunEvent[];
+  standards: StandardsMetadata;
 }): string {
   const lines = [
     "# Mobile Accessibility Crawl Report",
@@ -1053,6 +1148,16 @@ function renderMarkdownReport(report: {
     `- Runtime errors: ${report.summary.runtimeErrors}`,
     `- Completed: ${report.summary.completed ? "yes" : "no"}`,
     "",
+    "## Standards Alignment",
+    "",
+    `- ${report.standards.name}: ${report.standards.url}`,
+    `- Conformance claim: ${report.standards.conformanceClaim ? "yes" : "no"}`,
+    `- Note: ${report.standards.note}`,
+    "",
+    "### Basis",
+    "",
+    ...report.standards.basis.map((standard) => `- ${standard.source} ${standard.id}: ${standard.title} (${standard.url})`),
+    "",
     "## Findings",
     "",
   ];
@@ -1063,6 +1168,7 @@ function renderMarkdownReport(report: {
     for (const finding of report.findings) {
       lines.push(
         `- [${finding.severity.toUpperCase()}] ${finding.rule} on ${finding.screenId}: ${finding.message}`,
+        `  - Standards: ${finding.standards.length > 0 ? finding.standards.map((standard) => `${standard.source} ${standard.id} ${standard.title}`).join("; ") : "not mapped"}`,
         `  - Element: ${finding.element.type} ${finding.element.label ? `"${finding.element.label}"` : ""}`,
         `  - Path: ${finding.element.path}`,
       );

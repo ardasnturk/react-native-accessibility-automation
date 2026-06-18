@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Timestamped report history with delete/open actions.
 - Screenshot, XML, JSON, and Markdown report artifacts.
 - Screen-level accessibility findings and evidence preview.
+- W3C/WAI mobile accessibility alignment metadata and per-finding WCAG references.
 - Grouped crawler events for automation diagnostics.
 - Light/dark mode with system-theme default.
 - English and Turkish dashboard UI.

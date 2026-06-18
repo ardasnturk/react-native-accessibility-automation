@@ -10,6 +10,20 @@ Current release: `0.1.0`
 
 This first public release includes the TypeScript crawler, the self-hosted Next.js dashboard, simulator onboarding, report history, screenshots, XML artifacts, grouped crawler events, and English/Turkish UI support.
 
+## Standards Alignment
+
+This project produces reports aligned with [W3C/WAI Mobile Accessibility](https://www.w3.org/WAI/standards-guidelines/mobile/) guidance.
+
+W3C states that there are no separate W3C mobile accessibility guidelines; mobile accessibility is covered by existing W3C accessibility standards and guidance, including WCAG. The crawler therefore maps automated findings to relevant WCAG/WAI references where possible, including:
+
+- WCAG 2.2 Success Criterion 4.1.2: Name, Role, Value
+- WCAG 2.2 Success Criterion 2.5.8: Target Size (Minimum)
+- WCAG 2.2 Success Criterion 2.4.6: Headings and Labels
+- WCAG 2.2 Success Criterion 2.5.3: Label in Name
+- W3C/WAI mobile accessibility guidance for applying WCAG to mobile, native, and hybrid applications
+
+The generated JSON and Markdown reports include standards metadata and per-finding standard references. This is an automated alignment report, not a complete WCAG conformance claim. Manual testing is still required for full accessibility evaluation.
+
 ## License
 
 This project is released under the [MIT License](LICENSE).
